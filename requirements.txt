@@ -4,18 +4,17 @@ fastapi==0.109.0
 uvicorn==0.27.0
 
 # RAG相關
-langchain==0.3.26
-langchain-openai==0.3.24
-langchain-community==0.3.26
-langchain-chroma==0.2.4
-openai==1.90.0
-chromadb==0.4.22
-tiktoken==0.9.0
-faiss-cpu==1.7.4
+langchain>=0.1.0
+langchain-community>=0.0.25
+langchain-openai>=0.0.5
+langchain-chroma>=0.1.0
+openai>=1.12.0
+chromadb>=0.4.0
+tiktoken>=0.5.0
+faiss-cpu>=1.7.0
 
 # 文檔處理
-pypdf==4.0.1
-docx2txt==0.8
+pypdf>=4.0.0
+docx2txt>=0.8
 yt_dlp==2025.6.9
-requests==2.31.0
-beautifulsoup4==4.12.2
+beautifulsoup4>=4.12.0
