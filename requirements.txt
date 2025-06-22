@@ -16,6 +16,6 @@ faiss-cpu==1.7.4
 # 文檔處理
 pypdf==4.0.1
 docx2txt==0.8
-pytube==15.0.0
-youtube-transcript-api==0.6.1
+yt_dlp==2025.6.9
+requests==2.31.0
 beautifulsoup4==4.12.2

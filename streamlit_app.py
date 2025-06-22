@@ -8,8 +8,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain_community.document_loaders import (
-    PyPDFLoader, 
-    Docx2txtLoader, 
+    PyPDFLoader,
+    Docx2txtLoader,
     TextLoader,
     UnstructuredURLLoader
 )
@@ -17,11 +17,11 @@ from langchain_community.vectorstores import Chroma
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate, ChatPromptTemplate
-from youtube_transcript_api import YouTubeTranscriptApi
 import re
-from pytube import YouTube
 import pandas as pd
 from datetime import datetime
+import yt_dlp
+import requests
 
 # 設置頁面配置
 st.set_page_config(
@@ -116,9 +116,92 @@ def extract_youtube_id(url):
 def get_youtube_transcript(youtube_id):
     """獲取YouTube視頻的字幕"""
     try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(youtube_id, languages=['zh-TW', 'zh-CN', 'en'])
-        transcript = " ".join([item['text'] for item in transcript_list])
-        return transcript
+        youtube_url = f"https://www.youtube.com/watch?v={youtube_id}"
+        
+        # 使用yt_dlp獲取視頻信息
+        with st.spinner("正在獲取YouTube字幕..."):
+            with yt_dlp.YoutubeDL({}) as ydl:
+                info = ydl.extract_info(youtube_url, download=False)
+                subs = info.get('subtitles', {})
+                auto_subs = info.get('automatic_captions', {})
+                
+                # 顯示可用的字幕語言
+                all_langs = list(subs.keys()) + list(auto_subs.keys())
+                if all_langs:
+                    st.info(f"該視頻有以下語言的字幕可用: {', '.join(all_langs)}")
+                
+                # 優先手動字幕，其次自動字幕
+                target = None
+                source_type = None
+                lang_found = None
+                
+                # 優先查找中文字幕
+                for source, source_name in [(subs, "手動"), (auto_subs, "自動")]:
+                    for lang, tracks in source.items():
+                        if lang.startswith('zh'):
+                            # 找到字幕網址
+                            for track in tracks:
+                                if track['ext'] == 'vtt':
+                                    target = track['url']
+                                    source_type = source_name
+                                    lang_found = lang
+                                    break
+                        if target:
+                            break
+                    if target:
+                        break
+                
+                # 如果沒有中文字幕，嘗試英文字幕
+                if not target:
+                    for source, source_name in [(subs, "手動"), (auto_subs, "自動")]:
+                        for lang, tracks in source.items():
+                            if lang.startswith('en'):
+                                # 找到字幕網址
+                                for track in tracks:
+                                    if track['ext'] == 'vtt':
+                                        target = track['url']
+                                        source_type = source_name
+                                        lang_found = lang
+                                        break
+                            if target:
+                                break
+                        if target:
+                            break
+                
+                # 如果還是沒有，嘗試任何可用的字幕
+                if not target and (subs or auto_subs):
+                    for source, source_name in [(subs, "手動"), (auto_subs, "自動")]:
+                        if source:
+                            first_lang = list(source.keys())[0]
+                            tracks = source[first_lang]
+                            for track in tracks:
+                                if track['ext'] == 'vtt':
+                                    target = track['url']
+                                    source_type = source_name
+                                    lang_found = first_lang
+                                    break
+                            if target:
+                                break
+                
+                if not target:
+                    st.error("此影片沒有任何可用字幕")
+                    return None
+                
+                st.success(f"找到{lang_found}字幕，來源：{source_type}")
+                
+                # 下載字幕內容
+                r = requests.get(target)
+                
+                # 解析VTT格式字幕
+                transcript = []
+                for line in r.text.splitlines():
+                    # 過濾掉VTT標頭、時間軸等
+                    if line.strip() == "" or "-->" in line or line.startswith("WEBVTT"):
+                        continue
+                    transcript.append(line.strip())
+                
+                # 合併字幕文本
+                return " ".join(transcript)
     except Exception as e:
         st.error(f"獲取YouTube字幕失敗: {str(e)}")
         return None
@@ -126,22 +209,28 @@ def get_youtube_transcript(youtube_id):
 def get_youtube_info(youtube_id):
     """獲取YouTube視頻的信息"""
     try:
-        yt = YouTube(f"https://www.youtube.com/watch?v={youtube_id}")
-        return {
-            "title": yt.title,
-            "author": yt.author,
-            "publish_date": yt.publish_date,
-            "views": yt.views,
-            "thumbnail_url": yt.thumbnail_url
-        }
+        youtube_url = f"https://www.youtube.com/watch?v={youtube_id}"
+        
+        # 使用yt_dlp獲取視頻信息
+        with yt_dlp.YoutubeDL({}) as ydl:
+            info = ydl.extract_info(youtube_url, download=False)
+            
+            return {
+                "title": info.get('title', f"YouTube視頻 {youtube_id}"),
+                "author": info.get('uploader', "YouTube作者"),
+                "publish_date": info.get('upload_date'),
+                "views": info.get('view_count', 0),
+                "thumbnail_url": info.get('thumbnail') or f"https://img.youtube.com/vi/{youtube_id}/0.jpg"
+            }
     except Exception as e:
         st.error(f"獲取YouTube信息失敗: {str(e)}")
+        # 返回默認值
         return {
-            "title": "未知標題",
-            "author": "未知作者",
+            "title": f"YouTube視頻 {youtube_id}",
+            "author": "YouTube作者",
             "publish_date": None,
             "views": 0,
-            "thumbnail_url": None
+            "thumbnail_url": f"https://img.youtube.com/vi/{youtube_id}/0.jpg"
         }
 
 def process_document(file, category, tags):
@@ -212,13 +301,14 @@ def process_youtube(youtube_url, category, tags):
         st.error("無效的YouTube URL")
         return None
     
-    # 獲取YouTube信息
-    info = get_youtube_info(youtube_id)
-    
     # 獲取字幕
     transcript = get_youtube_transcript(youtube_id)
     if not transcript:
+        st.error(f"無法獲取YouTube視頻 {youtube_id} 的字幕，請確保視頻有字幕")
         return None
+    
+    # 獲取YouTube信息（即使失敗也繼續）
+    info = get_youtube_info(youtube_id)
     
     # 生成唯一ID
     doc_id = str(uuid.uuid4())
@@ -265,6 +355,7 @@ def process_youtube(youtube_url, category, tags):
         "thumbnail_url": info["thumbnail_url"]
     })
     
+    st.success(f"成功添加YouTube視頻: {info['title']}")
     return documents
 
 def update_vectorstore():
