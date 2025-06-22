@@ -82,6 +82,34 @@
 - 添加用戶認證和多用戶支持
 - 添加知識庫版本控制
 
+## 雲端部署指南
+
+### Streamlit Cloud 部署
+
+1. 在 GitHub 上創建一個新的倉庫
+2. 將本地倉庫推送到 GitHub：
+   ```
+   git remote add origin https://github.com/你的用戶名/你的倉庫名.git
+   git push -u origin main
+   ```
+
+3. 前往 [Streamlit Cloud](https://streamlit.io/cloud) 並登入
+4. 點擊 "New app" 按鈕
+5. 選擇您的 GitHub 倉庫、分支（main）和主檔案（streamlit_app.py）
+6. 在 "Advanced settings" 中，添加以下密鑰：
+   - OPENAI_API_KEY（必需）
+   - 其他可選的環境變數
+
+7. 點擊 "Deploy" 按鈕
+8. 等待部署完成，您的應用將在幾分鐘內上線
+
+### 其他部署選項
+
+- **Render**：一個簡單的雲端平台，支援 Python 應用程式
+- **Railway**：適合小型應用程式的平台
+- **Heroku**：通用的雲端平台，支援 Python 應用程式
+- **AWS, GCP, Azure**：更強大但也更複雜的雲端平台
+
 ## 授權
 
 [MIT License](LICENSE)
