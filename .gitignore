@@ -35,7 +35,7 @@ env/
 *.swp
 *.swo
 
-# 資料檔案（可選，視情況而定）
-# data/documents/
-# data/youtube/
-# data/vectorstore/
+# 資料檔案
+data/documents/
+data/youtube/
+data/vectorstore/
