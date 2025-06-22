@@ -1,0 +1,21 @@
+# 基本框架
+streamlit==1.32.0
+fastapi==0.109.0
+uvicorn==0.27.0
+
+# RAG相關
+langchain==0.3.26
+langchain-openai==0.3.24
+langchain-community==0.3.26
+langchain-chroma==0.2.4
+openai==1.90.0
+chromadb==0.4.22
+tiktoken==0.9.0
+faiss-cpu==1.7.4
+
+# 文檔處理
+pypdf==4.0.1
+docx2txt==0.8
+pytube==15.0.0
+youtube-transcript-api==0.6.1
+beautifulsoup4==4.12.2
